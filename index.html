@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES Encryption/Decryption</title>
+</head>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 40px;
+        background-color: #f0f2f5;
+        color: #1a1a1a;
+    }
+    
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 30px;
+    }
+    
+    .tabs {
+        display: flex;
+        margin-bottom: 20px;
+        gap: 10px;
+        justify-content: center;
+    }
+    
+    .tab-button {
+        padding: 10px 20px;
+        border: none;
+        background-color: #e0e0e0;
+        cursor: pointer;
+        border-radius: 5px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .tab-button.active {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .form-container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+    
+    input[type="text"]:focus {
+        border-color: #4CAF50;
+        outline: none;
+    }
+    
+    button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+    }
+    
+    button:hover {
+        background-color: #45a049;
+    }
+    
+    .result-container {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        display: none;
+    }
+    
+    .result-container.show {
+        display: block;
+    }
+    
+    .result-title {
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #2c3e50;
+    }
+    
+    .result-text {
+        word-break: break-all;
+        font-family: monospace;
+        background-color: white;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        background-color: #f8d7da;
+        border-radius: 4px;
+        margin-top: 10px;
+        display: none;
+    }
+</style>
+<body>
+    <div class="container">
+        <h1>AES Encryption/Decryption</h1>
+        
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('encrypt')">Encrypt</button>
+            <button class="tab-button" onclick="switchTab('decrypt')">Decrypt</button>
+        </div>
+        
+        <div class="form-container" id="encrypt-form">
+            <div class="form-group">
+                <label for="key">Encryption Key (32 characters):</label>
+                <input type="text" id="key" name="key" maxlength="32" required>
+                <button type="button" onclick="generateRandomKey()" style="margin-top: 10px;">Generate Random Key</button>
+            </div>
+            <div class="form-group">
+                <label for="plaintext">Plaintext:</label>
+                <input type="text" id="plaintext" name="plaintext" required>
+            </div>
+            <button onclick="handleEncrypt()">Encrypt</button>
+            
+            <div class="result-container" id="encrypt-result">
+                <div class="result-title">Key (save this for decryption):</div>
+                <div class="result-text" id="used-key"></div>
+                <div class="result-title">Encrypted Result:</div>
+                <div class="result-text" id="ciphertext"></div>
+                <div class="result-title">IV:</div>
+                <div class="result-text" id="iv"></div>
+                <div class="result-title">Tag:</div>
+                <div class="result-text" id="tag"></div>
+            </div>
+        </div>
+        
+        <div class="form-container" id="decrypt-form" style="display: none;">
+            <div class="form-group">
+                <label for="decrypt-key">Decryption Key:</label>
+                <input type="text" id="decrypt-key" maxlength="32" required>
+            </div>
+            <div class="form-group">
+                <label for="decrypt-ciphertext">Ciphertext:</label>
+                <input type="text" id="decrypt-ciphertext" required>
+            </div>
+            <div class="form-group">
+                <label for="decrypt-iv">IV:</label>
+                <input type="text" id="decrypt-iv" required>
+            </div>
+            <div class="form-group">
+                <label for="decrypt-tag">Tag:</label>
+                <input type="text" id="decrypt-tag" required>
+            </div>
+            <button onclick="handleDecrypt()">Decrypt</button>
+            
+            <div class="result-container" id="decrypt-result">
+                <div class="result-title">Decrypted Result:</div>
+                <div class="result-text" id="decrypted-text"></div>
+            </div>
+        </div>
+        
+        <div class="error-message" id="error-message"></div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide forms
+            document.getElementById('encrypt-form').style.display = tab === 'encrypt' ? 'block' : 'none';
+            document.getElementById('decrypt-form').style.display = tab === 'decrypt' ? 'block' : 'none';
+            
+            // Hide results and errors
+            document.querySelectorAll('.result-container').forEach(container => {
+                container.classList.remove('show');
+            });
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function generateRandomKey() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+            let result = '';
+            for (let i = 0; i < 32; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            document.getElementById('key').value = result;
+        }
+
+        async function handleEncrypt() {
+            try {
+                const plaintext = document.getElementById('plaintext').value;
+                const key = document.getElementById('key').value;
+                
+                if (!plaintext || !key) {
+                    throw new Error('Please enter both text and key');
+                }
+                
+                if (key.length !== 32) {
+                    throw new Error('Key must be exactly 32 characters');
+                }
+
+                const response = await fetch('http://localhost:8080/encrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plaintext, key })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Encryption failed');
+                }
+
+                const data = await response.json();
+                
+                document.getElementById('used-key').textContent = key;
+                document.getElementById('ciphertext').textContent = data.ciphertext;
+                document.getElementById('iv').textContent = data.iv;
+                document.getElementById('tag').textContent = data.tag;
+                document.getElementById('encrypt-result').classList.add('show');
+                document.getElementById('error-message').style.display = 'none';
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function handleDecrypt() {
+            try {
+                const key = document.getElementById('decrypt-key').value;
+                const ciphertext = document.getElementById('decrypt-ciphertext').value;
+                const iv = document.getElementById('decrypt-iv').value;
+                const tag = document.getElementById('decrypt-tag').value;
+
+                if (!ciphertext || !iv || !tag || !key) {
+                    throw new Error('Please fill in all fields');
+                }
+
+                if (key.length !== 32) {
+                    throw new Error('Key must be exactly 32 characters');
+                }
+
+                const response = await fetch('http://localhost:8080/decrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ciphertext, iv, tag, key })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Decryption failed');
+                }
+
+                const data = await response.json();
+                document.getElementById('decrypted-text').textContent = data.plaintext;
+                document.getElementById('decrypt-result').classList.add('show');
+                document.getElementById('error-message').style.display = 'none';
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+    </script>
+</body>
+</html> 
